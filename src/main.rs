@@ -1,11 +1,12 @@
-#![allow(non_snake_case)] // Allow non-snake-case style for identifiers
-#[warn(non_camel_case_types)] // Warn if non-camel-case types are used
+#![allow(non_snake_case)]
+#[warn(non_camel_case_types)]
 
-mod imports; // Import the imports module
-pub use imports::*; // Use all items from the imports module
-mod datatweaks; // Import the datatweaks module
+// Import necessary modules and make them publicly available
+mod imports;
+pub use imports::*;
+mod datatweaks;
 
-// Struct to hold the result data, with serialization and deserialization capabilities
+// Define a struct for handling API results
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResultStruct {
     tick: String,
@@ -22,83 +23,120 @@ pub struct ResultStruct {
     mtsAdd: String,
 }
 
-// Struct to hold the overall data, which includes a message and a list of results
+// Define a struct for handling API data
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DataStruct {
     message: String,
     result: Vec<ResultStruct>
 }
 
-// Struct to handle events
+// Define a struct for handling events
 struct Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
-    // Handle incoming messages
     async fn message(&self, _ctx: Context, msg: Message) {
         // Ignore messages from bots
         if msg.author.bot {
             return;
         }
-        // If the message content is "!track"
-        if msg.content == "!track" {
-            // Check if 5 minutes have passed since the last fetch
-            let fetch_result = if datatweaks::check_time().expect("Failed to fetch data from metadata.json") {
-                // If time has passed, fetch data from the API
-                match datatweaks::fetch_from_api().await {
-                    Ok(data) => {
-                        // Save the fetched data
-                        datatweaks::save_data(&data).expect("Failed to save data");
-                        data
-                    },
-                    Err(e) => {
-                        // Handle fetch error
-                        println!("Failed to fetch from API: {}", e);
-                        return;
+
+        // Split the message into parts and extract the command
+        let message = msg.content.as_str();
+        let mut message_parts = message.split(' ');
+        let command = message_parts.next().unwrap();
+        let message_word_count = message.split_whitespace().count();
+
+        // Handle the "!track" command with exactly two parameters
+        if command == "!track" && message_word_count == 2 {
+            let token = message_parts.next().unwrap_or("").to_uppercase();
+            let should_fetch;
+
+            // Check if data needs to be fetched from the API
+            let fetch_result = if let Ok((fetch, _)) = datatweaks::check_time(&token) {
+                should_fetch = fetch;
+                if should_fetch {
+                    match datatweaks::fetch_from_api(&token).await {
+                        Ok(data) => {
+                            // Save the fetched data
+                            datatweaks::save_data(&data, &token).expect("Failed to save data");
+                            data
+                        },
+                        Err(e) => {
+                            // Handle errors during API fetch
+                            if e.to_string().contains("invalid type: null, expected a sequence") {
+                                let token_error = CreateMessage::new().embed(CreateEmbed::new()
+                                .color(7391162)
+                                .field("Invalid token", "Make sure to provide a valid token for: `!track [token]`!", false)
+                                .author(
+                                    CreateEmbedAuthor::new("Temp")
+                                        .name("Nacho the 𐤊at")
+                                ));
+                                if let Err(why) = msg.channel_id.send_message(&_ctx.http, token_error).await {
+                                    println!("Error sending message: {:?}", why);
+                                }
+                            } else {
+                                println!("Failed to fetch from API: {}", e);
+                            }
+                            return;
+                        }
+                    }
+                } else {
+                    // Fetch data from JSON if not fetching from API
+                    match datatweaks::fetch_from_json(&token) {
+                        Ok(data) => data,
+                        Err(e) => {
+                            println!("Failed to fetch from JSON: {}", e);
+                            return;
+                        }
                     }
                 }
             } else {
-                // If time hasn't passed, fetch data from the local JSON file
-                match datatweaks::fetch_from_json("data.json") {
-                    Ok(data) => data,
-                    Err(e) => {
-                        // Handle fetch error
-                        println!("Failed to fetch from JSON: {}", e);
-                        return;
-                    }
-                }
+                println!("Failed to check time");
+                return;
             };
 
-            // Format the fetched data into a message
+            // Format the fetched data and send it as a message
             let formatted_message = datatweaks::format_data(fetch_result).await;
-            // Send the message to the channel
             if let Err(why) = msg.channel_id.send_message(&_ctx.http, formatted_message).await {
+                println!("Error sending message: {:?}", why);
+            } else {
+                println!("Token: {}, Should Fetch: {}", token, should_fetch);
+            }
+        } else if command == "!track" {
+            // Handle incorrect number of parameters for the "!track" command
+            let paramater_error = CreateMessage::new().embed(CreateEmbed::new()
+            .color(7391162)
+            .field("Wrong Number of Parameters", "Make sure to use the correct format for: `!track [token]`!", false)
+            .author(
+                CreateEmbedAuthor::new("Temp")
+                    .name("Nacho the 𐤊at")
+            ));
+            if let Err(why) = msg.channel_id.send_message(&_ctx.http, paramater_error).await {
                 println!("Error sending message: {:?}", why);
             }
         }
     }
 
-    // Handle the ready event
+    // Handle the "ready" event when the bot is connected
     async fn ready(&self, _: Context, ready: Ready) {
-        println!("{} is connected!", ready.user.name); // Print a message when the bot is connected
+        println!("{} is connected!", ready.user.name);
     }
 }
 
 #[tokio::main]
 async fn main() {
-    dotenv().ok(); // Load environment variables from a `.env` file
-    let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment"); // Get the Discord token from the environment variables
+    dotenv().ok();
+    let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
-    let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT; // Set the intents for the bot
+    let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT;
 
-    // Create a new client instance
     let mut client = Client::builder(&token, intents)
-        .event_handler(Handler) // Set the event handler
+        .event_handler(Handler)
         .await
         .expect("Err creating client");
 
-    // Start the client
     if let Err(why) = client.start().await {
-        println!("Client error: {:?}", why); // Handle client start error
+        println!("Client error: {:?}", why);
     }
 }

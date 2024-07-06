@@ -1,20 +1,23 @@
-pub use dotenv::dotenv; //Loads environment variables from `.env`
-pub use serde::{Deserialize, Serialize}; //Used for serializing (Convert for easy storage and use) data
-pub use serde_json::json; //Used for creating JSon files
-pub use reqwest::Error; //Used for handling errors related to HTTP requests
+// Load environment variables from `.env`
+pub use dotenv::dotenv;
 
-pub use std::env; //Interact with environment
-pub use std::fs::{File, OpenOptions}; // Used for file operations: `File` for creating/reading/writing, `OpenOptions` for configuring file options
-pub use std::io::prelude::*; // Brings in traits for I/O operations like Read and Write
-pub use std::io::{self, Read, Write}; // I/O operations: `io` module for general I/O, `Read` and `Write` for reading from and writing to files
-pub use std::path::Path; // Used for handling and manipulating file system paths
-pub use std::time::{SystemTime, UNIX_EPOCH}; // Used for time operations: `SystemTime` for current system time, `UNIX_EPOCH` for UNIX epoch time
+// Serde for serialization and deserialization
+pub use serde::{Deserialize, Serialize}; // Used for serializing (converting for easy storage and use) data
+pub use serde_json::json; // Used for creating JSON files
 
+// Reqwest for HTTP requests and error handling
+pub use reqwest::Error; // Used for handling errors related to HTTP requests
+
+// Standard library imports for environment interaction and file operations
+pub use std::env; // Interact with environment variables
+pub use std::fs::{create_dir_all, File, OpenOptions}; // File operations: create directory, file creation/reading/writing, configuring file options
+pub use std::io::{self, prelude::*, Read, Write}; // I/O operations: traits for I/O operations like Read and Write, general I/O operations
+pub use std::path::Path; // Handling and manipulating file system paths
+pub use std::time::{SystemTime, UNIX_EPOCH}; // Time operations: current system time, UNIX epoch time
+
+// Serenity for Discord bot functionality
 pub use serenity::async_trait; // Provides support for async traits
+pub use serenity::builder::{CreateEmbed, CreateEmbedAuthor, CreateMessage}; // Create embeds, embedded authors, and messages (can be embeds)
 pub use serenity::model::channel::Message; // Message sent in channel
-pub use serenity::model::gateway::GatewayIntents;
-pub use serenity::model::gateway::Ready; // Event for when bot is ready
-pub use serenity::builder::CreateEmbed; // Create embeds
-pub use serenity::builder::CreateEmbedAuthor; // Create embedded author
-pub use serenity::builder::CreateMessage; // Create messages (can be embed)
-pub use serenity::prelude::*; // Commonly used traits and types from serenity
+pub use serenity::model::gateway::{GatewayIntents, Ready}; // Event for when the bot is ready, gateway intents
+pub use serenity::prelude::*; // Commonly used traits and types from Serenity
