@@ -21,14 +21,17 @@ RUN rm ./target/release/deps/nacho_bot*
 RUN cargo build --release
 
 # Final base image
-FROM debian:bullseye-slim
+FROM ubuntu:22.04
 WORKDIR /root/
 
 # Copy the build artifact from the build stage and remove extra files
 COPY --from=builder /nacho_bot/target/release/nacho_bot .
 
-# Install needed packages
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+# Install necessary packages including OpenSSL 3.x
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    openssl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Ensure the binary is executable
 RUN chmod +x ./nacho_bot
@@ -42,6 +45,3 @@ ENV DISCORD_TOKEN ""
 
 # Command to run the executable
 CMD ["./nacho_bot"]
-
-# Expose the port the app runs on
-EXPOSE 8080
