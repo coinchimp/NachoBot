@@ -42,3 +42,6 @@ ENV DISCORD_TOKEN ""
 
 # Command to run the executable
 CMD ["./nacho_bot"]
+
+# Expose the port the app runs on
+EXPOSE 8080
