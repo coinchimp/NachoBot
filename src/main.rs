@@ -5,6 +5,8 @@
 mod imports;
 pub use imports::*;
 mod datatweaks;
+use warp::Filter;
+use tokio;
 
 // Define a struct for handling API results
 #[derive(Debug, Serialize, Deserialize)]
@@ -126,17 +128,40 @@ impl EventHandler for Handler {
 
 #[tokio::main]
 async fn main() {
-    dotenv().ok();
+    // Initialize the logger
+    env_logger::init();
+
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
     let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT;
 
-    let mut client = Client::builder(&token, intents)
-        .event_handler(Handler)
-        .await
-        .expect("Err creating client");
+    let discord_task = tokio::spawn(async move {
+        let mut client = Client::builder(&token, intents)
+            .event_handler(Handler) // Set the event handler
+            .await
+            .expect("Err creating client");
 
-    if let Err(why) = client.start().await {
-        println!("Client error: {:?}", why);
+        // Start the client
+        if let Err(why) = client.start().await {
+            println!("Client error: {:?}", why);
+        }
+    });    
+    // Get the port from the environment variables, default to 8080 if not set
+    let port: u16 = env::var("PORT").unwrap_or_else(|_| "8080".to_string()).parse().unwrap();
+
+    // Set up the health check route
+    let health_route = warp::get()
+        .and(warp::path::end())
+        .map(|| "Healthy");
+
+    // Serve the health check route
+    let warp_task = warp::serve(health_route)
+        .run(([0, 0, 0, 0], port));
+
+    // Run both tasks concurrently
+    tokio::select! {
+        _ = discord_task => {},
+        _ = warp_task => {},
     }
+
 }
