@@ -1,5 +1,5 @@
 # Use an official Rust image from the Docker Hub
-FROM rust:1.65 as builder
+FROM rust:1.74 as builder
 
 # Create a new empty shell project
 RUN USER=root cargo new --bin nacho_bot
