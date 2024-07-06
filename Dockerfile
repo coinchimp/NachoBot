@@ -25,7 +25,7 @@ FROM debian:bullseye-slim
 WORKDIR /root/
 
 # Copy the build artifact from the build stage and remove extra files
-COPY --from=builder /whistle/target/release/nacho_bot .
+COPY --from=builder /nacho_bot/target/release/nacho_bot .
 
 # Install needed packages
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
