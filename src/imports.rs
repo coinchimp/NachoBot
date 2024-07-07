@@ -1,6 +1,3 @@
-// Load environment variables from `.env`
-pub use dotenv::dotenv;
-
 // Serde for serialization and deserialization
 pub use serde::{Deserialize, Serialize}; // Used for serializing (converting for easy storage and use) data
 pub use serde_json::json; // Used for creating JSON files
@@ -21,3 +18,6 @@ pub use serenity::builder::{CreateEmbed, CreateEmbedAuthor, CreateMessage}; // C
 pub use serenity::model::channel::Message; // Message sent in channel
 pub use serenity::model::gateway::{GatewayIntents, Ready}; // Event for when the bot is ready, gateway intents
 pub use serenity::prelude::*; // Commonly used traits and types from Serenity
+
+pub use warp::Filter;
+pub use tokio;

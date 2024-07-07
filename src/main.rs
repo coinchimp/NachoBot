@@ -5,8 +5,7 @@
 mod imports;
 pub use imports::*;
 mod datatweaks;
-use warp::Filter;
-use tokio;
+
 
 // Define a struct for handling API results
 #[derive(Debug, Serialize, Deserialize)]
@@ -50,7 +49,7 @@ impl EventHandler for Handler {
         let message_word_count = message.split_whitespace().count();
 
         // Handle the "!track" command with exactly two parameters
-        if command == "!track" && message_word_count == 2 {
+        if command == "!status" && message_word_count == 2 {
             let token = message_parts.next().unwrap_or("").to_uppercase();
             let should_fetch;
 
@@ -69,7 +68,7 @@ impl EventHandler for Handler {
                             if e.to_string().contains("invalid type: null, expected a sequence") {
                                 let token_error = CreateMessage::new().embed(CreateEmbed::new()
                                 .color(7391162)
-                                .field("Invalid token", "Make sure to provide a valid token for: `!track [token]`!", false)
+                                .field("Invalid token", "Make sure to provide a valid token for: `!status [token]`!", false)
                                 .author(
                                     CreateEmbedAuthor::new("Temp")
                                         .name("Nacho the 𐤊at")
@@ -105,11 +104,11 @@ impl EventHandler for Handler {
             } else {
                 println!("Token: {}, Should Fetch: {}", token, should_fetch);
             }
-        } else if command == "!track" {
+        } else if command == "!status" {
             // Handle incorrect number of parameters for the "!track" command
             let paramater_error = CreateMessage::new().embed(CreateEmbed::new()
             .color(7391162)
-            .field("Wrong Number of Parameters", "Make sure to use the correct format for: `!track [token]`!", false)
+            .field("Wrong Number of Parameters", "Make sure to use the correct format for: `!status [token]`!", false)
             .author(
                 CreateEmbedAuthor::new("Temp")
                     .name("Nacho the 𐤊at")
@@ -129,7 +128,7 @@ impl EventHandler for Handler {
 #[tokio::main]
 async fn main() {
     // Initialize the logger
-    env_logger::init();
+    //env_logger::init();
 
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
