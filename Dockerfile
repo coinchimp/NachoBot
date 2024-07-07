@@ -38,7 +38,7 @@ RUN chmod +x ./nacho_bot
 
 # Expose the port the server is listening on
 ENV PORT "8080"
-ENV RUST_LOG info
+ENV RUST_LOG warn
 
 # Use environment variables to pass into the application
 ENV DISCORD_TOKEN ""

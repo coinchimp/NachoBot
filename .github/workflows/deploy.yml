@@ -55,5 +55,5 @@ jobs:
           --platform managed \
           --region us-central1 \
           --allow-unauthenticated \
-          --set-env-vars DISCORD_TOKEN="${{ secrets.DISCORD_TOKEN }}",RUST_LOG="info"
+          --set-env-vars DISCORD_TOKEN="${{ secrets.DISCORD_TOKEN }}",RUST_LOG="warn"
       shell: bash

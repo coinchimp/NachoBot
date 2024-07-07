@@ -127,8 +127,6 @@ impl EventHandler for Handler {
 
 #[tokio::main]
 async fn main() {
-    // Initialize the logger
-    //env_logger::init();
 
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
