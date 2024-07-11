@@ -1,5 +1,7 @@
 use crate::DataStruct; // Import the DataStruct from the current crate
 use crate::imports::*; // Import everything from the imports module
+use serde_json::Value;
+use std::fs;
 
 const STORAGE_FOLDER: &str = "data_storage"; // Define a constant for the storage folder name
 
@@ -88,6 +90,16 @@ pub async fn fetch_from_api(token: &str) -> Result<DataStruct, Error> {
 
 // Format the fetched data into a message to be sent
 pub async fn format_data(data: DataStruct) -> CreateMessage {
+    // Load the JSON template
+    let template_content = fs::read_to_string("message_template.json").expect("Failed to read message template");
+    let template: Value = serde_json::from_str(&template_content).expect("Failed to parse message template");
+
+    // Ensure required fields are present in the template
+    let color = template["color"].as_u64().expect("Color not found in message template") as u32;
+    let background_image_url = template["background_image_url"].as_str().expect("Background image URL not found in message template");
+    let author_name = template["author"]["name"].as_str().expect("Author name not found in message template");
+    let author_icon_url = template["author"]["icon_url"].as_str().expect("Author icon URL not found in message template");
+
     let result = &data.result[0];
     let progress = result.minted.parse::<f64>().expect("Not a valid f64") / result.max.parse::<f64>().expect("Not a valid f64"); // Calculate the progress percentage
     let formatted_progress = format!("{:.2}%", progress * 100.0); // Format the progress as a percentage
@@ -100,10 +112,11 @@ pub async fn format_data(data: DataStruct) -> CreateMessage {
     
     // Create the message payload with an embedded message
     let payload = CreateMessage::new().embed(CreateEmbed::new()
-        .color(7391162)
+        .color(color)
+        .image(background_image_url)
         .field(formatted_token, formatted_progress, false)
-        .author(CreateEmbedAuthor::new("Temp")
-            .name("Nacho the 𐤊at")
+        .author(CreateEmbedAuthor::new(author_name)
+            .icon_url(author_icon_url)
         ));
     payload
 }

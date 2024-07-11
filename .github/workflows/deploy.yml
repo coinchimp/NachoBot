@@ -3,7 +3,7 @@ name: Build and Deploy to Google Cloud Run v0.1a
 on:
   push:
     branches:
-      - main  # Set to your default branch
+      - inactive-for-now  # Set to your default branch
 
 jobs:
   build-and-deploy:
