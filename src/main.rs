@@ -4,7 +4,9 @@
 // Import necessary modules and make them publicly available
 mod imports;
 pub use imports::*;
-mod datatweaks;
+mod mint_status {
+    pub mod datatweaks;
+}    
 mod result_struct;
 mod commands {
     pub mod status;
@@ -21,7 +23,9 @@ pub struct DataStruct {
 }
 
 // Define a struct for handling events
-struct Handler;
+struct Handler {
+    api_base_url: String,
+}
 
 #[async_trait]
 impl EventHandler for Handler {
@@ -38,7 +42,7 @@ impl EventHandler for Handler {
 
         // Call the status command handler
         if command == "!mint_status" {
-            commands::status::handle_status_command(&ctx, &msg, &mut message_parts).await;
+            commands::status::handle_status_command(&ctx, &msg, &mut message_parts, &self.api_base_url).await;
         }
     }
 
@@ -51,12 +55,14 @@ impl EventHandler for Handler {
 #[tokio::main]
 async fn main() {
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
+    // Read the API base URL from the environment variable or default to testnet
+    let api_base_url = env::var("KASPLEX_API_BASE_URL").unwrap_or_else(|_| "https://tn11api.kasplex.org/v1/krc20".to_string());
 
     let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT;
 
     let discord_task = tokio::spawn(async move {
         let mut client = Client::builder(&token, intents)
-            .event_handler(Handler) // Set the event handler
+            .event_handler(Handler { api_base_url }) // Pass the api_base_url to the handler
             .await
             .expect("Err creating client");
 

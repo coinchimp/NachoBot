@@ -1,10 +1,10 @@
 // src/commands/status.rs
 use crate::imports::*;
-use crate::datatweaks;
+use crate::mint_status::datatweaks;
 use serde_json::Value;
 use std::fs;
 
-pub async fn handle_status_command(ctx: &Context, msg: &Message, message_parts: &mut std::str::SplitWhitespace<'_>) {
+pub async fn handle_status_command(ctx: &Context, msg: &Message, message_parts: &mut std::str::SplitWhitespace<'_>, api_base_url: &str) {
     let message_word_count = msg.content.split_whitespace().count();
 
     // Load the JSON template
@@ -64,7 +64,7 @@ pub async fn handle_status_command(ctx: &Context, msg: &Message, message_parts: 
         let fetch_result = if let Ok((fetch, _)) = datatweaks::check_time(&token) {
             should_fetch = fetch;
             if should_fetch {
-                match datatweaks::fetch_from_api(&token).await {
+                match datatweaks::fetch_from_api(api_base_url,&token).await {
                     Ok(data) => {
                         datatweaks::save_data(&data, &token).expect("Failed to save data");
                         data

@@ -82,11 +82,13 @@ pub fn fetch_from_json(token: &str) -> io::Result<DataStruct> {
 }
 
 // Fetch data from the API for the given token
-pub async fn fetch_from_api(token: &str) -> Result<DataStruct, Error> {
-    let url = format!("https://tn11api.kasplex.org/v1/krc20/token/{}", token); // Construct the API URL
+
+pub async fn fetch_from_api(api_base_url: &str, token: &str) -> Result<DataStruct, Error> {
+    let url = format!("{}/token/{}?stat=true&holder=true", api_base_url, token); // Construct the API URL using the base URL
     let response = reqwest::get(url).await?.json::<DataStruct>().await?; // Send a GET request and parse the JSON response
     Ok(response)
 }
+
 
 // Format the fetched data into a message to be sent
 pub async fn format_data(data: DataStruct) -> CreateMessage {

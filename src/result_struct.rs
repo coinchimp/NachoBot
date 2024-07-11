@@ -15,4 +15,7 @@ pub struct ResultStruct {
     pub state: String,
     pub hashRev: String,
     pub mtsAdd: String,
+    pub holderTotal: String,
+    pub transferTotal: String,
+    pub mintTotal: String,
 }
