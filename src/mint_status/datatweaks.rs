@@ -5,14 +5,11 @@ use std::fs;
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::thread_rng;
 use serenity::builder::CreateEmbedFooter;
-use chrono::{NaiveDateTime, Utc, TimeZone, FixedOffset};
-
-
-
+use chrono::{ Utc, TimeZone};
 
 
 const STORAGE_FOLDER: &str = "data_storage"; // Define a constant for the storage folder name
-const PERIOD_LIMIT: u64 = 604800; // Define time retention in files for cache
+const PERIOD_LIMIT: u64 = 600; // Define time retention in files for cache
 
 // Define a struct for metadata to store the timestamp
 #[derive(Serialize, Deserialize)]
@@ -128,15 +125,34 @@ fn select_random_banner(banners: &Vec<Value>) -> &str {
     banners[index]["url"].as_str().unwrap()
 }
 
+
+
 fn format_timestamp(timestamp: u64) -> String {
-    let naive_datetime = NaiveDateTime::from_timestamp(timestamp as i64, 0);
-    // Assuming CDT is UTC-5
-    let cdt_offset = FixedOffset::west_opt(5 * 3600).unwrap();
-    let datetime_cdt = cdt_offset.from_local_datetime(&naive_datetime).unwrap();
-    let datetime_utc = datetime_cdt.with_timezone(&Utc);
-    let formatted_datetime = datetime_utc.format("%B %e at %I:%M%P UTC").to_string();
-    format!("Last update on {}", formatted_datetime)
+    // Convert timestamp to UTC datetime
+    let datetime_utc = Utc.timestamp_opt(timestamp as i64, 0).single().unwrap();
+
+    // Convert UTC datetime to CDT
+    //let datetime_cdt = datetime_utc.with_timezone(&FixedOffset::west(5 * 3600));
+
+    let now_utc = Utc::now();
+    let duration = now_utc.signed_duration_since(datetime_utc);
+
+    let days = duration.num_days();
+    let hours = duration.num_hours() % 24;
+    let minutes = duration.num_minutes() % 60;
+
+    let formatted_duration = if days > 0 {
+        format!("{} days and {} hr ago", days, hours)
+    } else if hours > 0 {
+        format!("{} hr and {} min ago", hours, minutes)
+    } else {
+        format!("{} min ago", minutes)
+    };
+
+    format!("Last status is from {}", formatted_duration)
 }
+
+
 
 
 pub async fn format_data(data: DataStruct) -> CreateMessage {
