@@ -1,0 +1,17 @@
+{
+    "commands": [
+      {
+        "name": "!mint_status [token]",
+        "description": "Displays the mint status for the given token."
+      },
+      {
+        "name": "!links",
+        "description": "Displays the official links."
+      },
+      {
+        "name": "!helpme",
+        "description": "Displays this help menu."
+      }
+    ]
+  }
+  

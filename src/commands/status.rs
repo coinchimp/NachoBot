@@ -3,6 +3,17 @@ use crate::imports::*;
 use crate::mint_status::datatweaks;
 use serde_json::Value;
 use std::fs;
+use rand::distributions::{Distribution, WeightedIndex};
+use rand::thread_rng;
+
+// Helper function to select a random background image based on weight
+fn select_random_banner(banners: &Vec<Value>) -> &str {
+    let weights: Vec<_> = banners.iter().map(|b| b["weight"].as_u64().unwrap_or(1) as u32).collect();
+    let dist = WeightedIndex::new(&weights).unwrap();
+    let mut rng = thread_rng();
+    let index = dist.sample(&mut rng);
+    banners[index]["url"].as_str().unwrap()
+}
 
 pub async fn handle_status_command(ctx: &Context, msg: &Message, message_parts: &mut std::str::SplitWhitespace<'_>, api_base_url: &str) {
     let message_word_count = msg.content.split_whitespace().count();
@@ -33,13 +44,15 @@ pub async fn handle_status_command(ctx: &Context, msg: &Message, message_parts: 
         }
     };
 
-    let background_image_url = match template["background_image_url"].as_str() {
-        Some(url) => url,
+    let background_images = match template["background_images"].as_array() {
+        Some(images) => images,
         None => {
-            println!("Background image URL not found in message template");
+            println!("Background images not found in message template");
             return;
         }
     };
+
+    let background_image_url = select_random_banner(background_images);
 
     let author_name = match template["author"]["name"].as_str() {
         Some(name) => name,
@@ -64,7 +77,7 @@ pub async fn handle_status_command(ctx: &Context, msg: &Message, message_parts: 
         let fetch_result = if let Ok((fetch, _)) = datatweaks::check_time(&token) {
             should_fetch = fetch;
             if should_fetch {
-                match datatweaks::fetch_from_api(api_base_url,&token).await {
+                match datatweaks::fetch_from_api(api_base_url, &token).await {
                     Ok(data) => {
                         datatweaks::save_data(&data, &token).expect("Failed to save data");
                         data

@@ -2,8 +2,17 @@ use crate::DataStruct; // Import the DataStruct from the current crate
 use crate::imports::*; // Import everything from the imports module
 use serde_json::Value;
 use std::fs;
+use rand::distributions::{Distribution, WeightedIndex};
+use rand::thread_rng;
+use serenity::builder::CreateEmbedFooter;
+use chrono::{NaiveDateTime, Utc, TimeZone, FixedOffset};
+
+
+
+
 
 const STORAGE_FOLDER: &str = "data_storage"; // Define a constant for the storage folder name
+const PERIOD_LIMIT: u64 = 604800; // Define time retention in files for cache
 
 // Define a struct for metadata to store the timestamp
 #[derive(Serialize, Deserialize)]
@@ -23,6 +32,23 @@ pub fn current_time() -> u64 {
 fn ensure_storage_folder_exists() -> io::Result<()> {
     create_dir_all(STORAGE_FOLDER)
 }
+
+fn format_large_number(number: f64) -> String {
+    const BILLION: f64 = 1_000_000_000.0;
+    const MILLION: f64 = 1_000_000.0;
+    const THOUSAND: f64 = 1_000.0;
+
+    if number >= BILLION {
+        format!("{:.2}B", number / BILLION)
+    } else if number >= MILLION {
+        format!("{:.2}M", number / MILLION)
+    } else if number >= THOUSAND {
+        format!("{:.2}K", number / THOUSAND)
+    } else {
+        format!("{}", number)
+    }
+}
+
 
 // Check if five minutes have passed since the last fetch for the given token
 pub fn check_time(token: &str) -> io::Result<(bool, bool)> {
@@ -44,8 +70,8 @@ pub fn check_time(token: &str) -> io::Result<(bool, bool)> {
     
     let metadata: Metadata = serde_json::from_str(&json)?; // Deserialize the JSON string into Metadata
 
-    let five_minutes_passed = current_time > metadata.timestamp + 300; // Check if five minutes have passed since the last timestamp
-    Ok((five_minutes_passed, false))
+    let time_period_passed = current_time > metadata.timestamp + PERIOD_LIMIT; // Check if five minutes have passed since the last timestamp
+    Ok((time_period_passed, false))
 }
 
 // Save data and its associated metadata (timestamp) to JSON files
@@ -82,43 +108,126 @@ pub fn fetch_from_json(token: &str) -> io::Result<DataStruct> {
 }
 
 // Fetch data from the API for the given token
-
 pub async fn fetch_from_api(api_base_url: &str, token: &str) -> Result<DataStruct, Error> {
     let url = format!("{}/token/{}?stat=true&holder=true", api_base_url, token); // Construct the API URL using the base URL
     let response = reqwest::get(url).await?.json::<DataStruct>().await?; // Send a GET request and parse the JSON response
     Ok(response)
 }
 
+// Helper function to format the optional values
+fn format_option(value: &Option<String>) -> String {
+    value.as_deref().unwrap_or("N/A").to_string()
+}
 
-// Format the fetched data into a message to be sent
+// Helper function to select a random background image based on weight
+fn select_random_banner(banners: &Vec<Value>) -> &str {
+    let weights: Vec<_> = banners.iter().map(|b| b["weight"].as_u64().unwrap_or(1) as u32).collect();
+    let dist = WeightedIndex::new(&weights).unwrap();
+    let mut rng = thread_rng();
+    let index = dist.sample(&mut rng);
+    banners[index]["url"].as_str().unwrap()
+}
+
+fn format_timestamp(timestamp: u64) -> String {
+    let naive_datetime = NaiveDateTime::from_timestamp(timestamp as i64, 0);
+    // Assuming CDT is UTC-5
+    let cdt_offset = FixedOffset::west_opt(5 * 3600).unwrap();
+    let datetime_cdt = cdt_offset.from_local_datetime(&naive_datetime).unwrap();
+    let datetime_utc = datetime_cdt.with_timezone(&Utc);
+    let formatted_datetime = datetime_utc.format("%B %e at %I:%M%P UTC").to_string();
+    format!("Last update on {}", formatted_datetime)
+}
+
+
 pub async fn format_data(data: DataStruct) -> CreateMessage {
     // Load the JSON template
     let template_content = fs::read_to_string("message_template.json").expect("Failed to read message template");
     let template: Value = serde_json::from_str(&template_content).expect("Failed to parse message template");
 
     // Ensure required fields are present in the template
-    let color = template["color"].as_u64().expect("Color not found in message template") as u32;
-    let background_image_url = template["background_image_url"].as_str().expect("Background image URL not found in message template");
+    let color = 0xADD8E6; // Light blue color
+    let background_images = template["background_images"].as_array().expect("Background images not found in message template");
+    let background_image_url = select_random_banner(background_images);
     let author_name = template["author"]["name"].as_str().expect("Author name not found in message template");
     let author_icon_url = template["author"]["icon_url"].as_str().expect("Author icon URL not found in message template");
 
     let result = &data.result[0];
-    let progress = result.minted.parse::<f64>().expect("Not a valid f64") / result.max.parse::<f64>().expect("Not a valid f64"); // Calculate the progress percentage
-    let formatted_progress = format!("{:.2}%", progress * 100.0); // Format the progress as a percentage
-    
-    // Format the token name for display
-    let mut chars = result.tick.chars();
-    let first_char = chars.next().unwrap().to_uppercase().collect::<String>();
-    let remaining_chars = chars.as_str().to_lowercase();
-    let formatted_token = format!("Percent of {}{} Minted", first_char, remaining_chars);
-    
+
+    // Get the current timestamp and format it
+    let metadata_content = fs::read_to_string(format!("{}/{}_metadata.json", STORAGE_FOLDER, result.tick)).expect("Failed to read metadata file");
+    let metadata: Metadata = serde_json::from_str(&metadata_content).expect("Failed to parse metadata");
+    let formatted_timestamp = format_timestamp(metadata.timestamp);
+
     // Create the message payload with an embedded message
-    let payload = CreateMessage::new().embed(CreateEmbed::new()
+    let mut embed = CreateEmbed::new()
         .color(color)
         .image(background_image_url)
-        .field(formatted_token, formatted_progress, false)
-        .author(CreateEmbedAuthor::new(author_name)
-            .icon_url(author_icon_url)
-        ));
-    payload
+        .author(CreateEmbedAuthor::new(author_name).icon_url(author_icon_url))
+        .description(formatted_timestamp) // Add the timestamp description
+        .footer(CreateEmbedFooter::new("x.com/coinchimpx"));
+
+    // Add content and footer
+    let content = format!("**# Mint Status for {}**", result.tick.to_uppercase());
+
+    // Check the state of the token
+    if result.state == "unused" {
+        let payload = CreateMessage::new()
+            .content(content)
+            .embed(embed.field(
+                "Token Status",
+                "This token hasn't been deployed",
+                false,
+            ));
+        return payload;
+    }
+
+    // Format the token name for display
+    let formatted_token = format!("% {} Minted", result.tick.to_uppercase());
+
+    let progress = result.minted.parse::<f64>().expect("Not a valid f64") / result.max.parse::<f64>().expect("Not a valid f64");
+    let formatted_progress = format!("{:.2}%", progress * 100.0);
+
+    // Format large numbers
+    let dec = result.dec.parse::<f64>().expect("Not a valid f64");
+    let max = result.max.parse::<f64>().expect("Not a valid f64") / 10f64.powf(dec);
+    let lim = result.lim.parse::<f64>().expect("Not a valid f64") / 10f64.powf(dec);
+    let minted = result.minted.parse::<f64>().expect("Not a valid f64") / 10f64.powf(dec);
+    let formatted_max = format_large_number(max);
+    let formatted_lim = format_large_number(lim);
+    let formatted_minted = format_large_number(minted);
+
+    // Calculate the sums for the top holders
+    let empty_vec = Vec::new();
+    let holders = result.holder.as_ref().unwrap_or(&empty_vec);
+    let sum_top_50: f64 = holders.iter().take(50).map(|h| h.amount.parse::<f64>().unwrap_or(0.0)).sum();
+    let sum_top_10: f64 = holders.iter().take(10).map(|h| h.amount.parse::<f64>().unwrap_or(0.0)).sum();
+    let sum_top_1: f64 = holders.iter().take(1).map(|h| h.amount.parse::<f64>().unwrap_or(0.0)).sum();
+
+    let formatted_sum_top_50 = format_large_number(sum_top_50 / 10f64.powf(dec));
+    let formatted_sum_top_10 = format_large_number(sum_top_10 / 10f64.powf(dec));
+    let formatted_sum_top_1 = format_large_number(sum_top_1 / 10f64.powf(dec));
+
+    let pre_allocation_amount = result.pre.parse::<f64>().unwrap_or(0.0) / 10f64.powf(dec);
+    let pre_allocation_desc = if pre_allocation_amount == 0.0 {
+        "Fair Launch".to_string()
+    } else {
+        format_large_number(pre_allocation_amount)
+    };
+
+    // Create the message payload with an embedded message
+    embed = embed
+        .field(formatted_token, formatted_progress, true)
+        .field("Pre-Allocation", pre_allocation_desc, true) // Add this line
+        .field("Mints", format_option(&result.mintTotal), true)
+        .field("Holders", format_option(&result.holderTotal), true)
+        .field("Max Supply", formatted_max, true)
+        .field("Limit", formatted_lim, true)
+        .field("Minted", formatted_minted, true)
+        .field("Top 50 Holders", formatted_sum_top_50, true)
+        .field("Top 10 Holders", formatted_sum_top_10, true)
+        .field("Top Holder", formatted_sum_top_1, true);
+
+    CreateMessage::new()
+        .content(content)
+        .embed(embed)
 }

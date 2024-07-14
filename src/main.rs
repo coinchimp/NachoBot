@@ -10,6 +10,8 @@ mod mint_status {
 mod result_struct;
 mod commands {
     pub mod status;
+    pub mod links;    
+    pub mod help;
 }
 
 // Import the ResultStruct to use in main.rs
@@ -41,9 +43,23 @@ impl EventHandler for Handler {
         let command = message_parts.next().unwrap();
 
         // Call the status command handler
-        if command == "!mint_status" {
-            commands::status::handle_status_command(&ctx, &msg, &mut message_parts, &self.api_base_url).await;
+        //if command == "!mint_status" {
+        //    commands::status::handle_status_command(&ctx, &msg, &mut message_parts, &self.api_base_url).await;
+        //}
+        
+        match command {
+            "!mint_status" => {
+                commands::status::handle_status_command(&ctx, &msg, &mut message_parts, &self.api_base_url).await;
+            },
+            "!links" => {
+                commands::links::handle_links_command(&ctx, &msg).await; // Add this line
+            },
+            "!helpme" => {
+                commands::help::handle_help_command(&ctx, &msg).await;
+            },
+            _ => {},
         }
+
     }
 
     // Handle the "ready" event when the bot is connected

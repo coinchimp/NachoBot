@@ -1,5 +1,10 @@
-// result_struct.rs
 use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Holder {
+    pub address: String,
+    pub amount: String,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResultStruct {
@@ -15,7 +20,14 @@ pub struct ResultStruct {
     pub state: String,
     pub hashRev: String,
     pub mtsAdd: String,
-    pub holderTotal: String,
-    pub transferTotal: String,
-    pub mintTotal: String,
+    pub holderTotal: Option<String>,
+    pub transferTotal: Option<String>,
+    pub mintTotal: Option<String>,
+    pub holder: Option<Vec<Holder>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DataStruct {
+    pub message: String,
+    pub result: Vec<ResultStruct>,
 }

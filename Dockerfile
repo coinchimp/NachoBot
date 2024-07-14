@@ -15,6 +15,7 @@ RUN rm src/*.rs
 
 # Now that the dependencies are built, copy your source tree
 COPY ./src ./src
+COPY ./message_template.json ./message_template.json
 
 # Build for release
 RUN rm ./target/release/deps/nacho_bot*
@@ -26,6 +27,7 @@ WORKDIR /root/
 
 # Copy the build artifact from the build stage and remove extra files
 COPY --from=builder /nacho_bot/target/release/nacho_bot .
+COPY --from=builder /nacho_bot/message_template.json .
 
 # Install necessary packages including OpenSSL 3.x
 RUN apt-get update && apt-get install -y \
