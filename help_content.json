@@ -1,13 +1,21 @@
 {
     "commands": [
       {
-        "name": "!mint_status [token]",
+        "name": "!tokeninfo [ticker]",
         "description": "Displays the mint status for the given token."
       },
+      {
+        "name": "!tokenbalance [wallet-address]",
+        "description": "Displays the balance of krc20 projects held by this wallet address."
+      },      
       {
         "name": "!links",
         "description": "Displays the official links."
       },
+      {
+        "name": "!donate",
+        "description": "Displays wallet info for donations."
+      },      
       {
         "name": "!helpme",
         "description": "Displays this help menu."

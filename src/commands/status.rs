@@ -88,7 +88,7 @@ pub async fn handle_status_command(ctx: &Context, msg: &Message, message_parts: 
                             let token_error = CreateMessage::new().embed(CreateEmbed::new()
                                 .color(color)
                                 .image(background_image_url)
-                                .field("Invalid token", "Make sure to provide a valid token for: `!status [token]`!", false)
+                                .field("Invalid token", "Make sure to provide a valid token for: `!tokeninfo [ticker]`!", false)
                                 .author(
                                     CreateEmbedAuthor::new(author_name)
                                         .icon_url(author_icon_url)
@@ -127,7 +127,7 @@ pub async fn handle_status_command(ctx: &Context, msg: &Message, message_parts: 
         let paramater_error = CreateMessage::new().embed(CreateEmbed::new()
             .color(color)
             .image(background_image_url)
-            .field("Wrong Number of Parameters", "Make sure to use the correct format for: `!status [token]`!", false)
+            .field("Wrong Number of Parameters", "Make sure to use the correct format for: `!tokeninfo [ticker]`!", false)
             .author(
                 CreateEmbedAuthor::new(author_name)
                     .icon_url(author_icon_url)

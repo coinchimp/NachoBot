@@ -7,11 +7,18 @@ pub use imports::*;
 mod mint_status {
     pub mod datatweaks;
 }    
+
+mod holder_status {
+    pub mod datatweaks;
+}  
+
 mod result_struct;
 mod commands {
     pub mod status;
     pub mod links;    
     pub mod help;
+    pub mod holder;
+    pub mod donate;
 }
 
 // Import the ResultStruct to use in main.rs
@@ -48,7 +55,7 @@ impl EventHandler for Handler {
         //}
         
         match command {
-            "!mint_status" => {
+            "!tokeninfo" => {
                 commands::status::handle_status_command(&ctx, &msg, &mut message_parts, &self.api_base_url).await;
             },
             "!links" => {
@@ -57,6 +64,12 @@ impl EventHandler for Handler {
             "!helpme" => {
                 commands::help::handle_help_command(&ctx, &msg).await;
             },
+            "!tokenbalance" => {
+                commands::holder::handle_holder_command(&ctx, &msg, &mut message_parts, &self.api_base_url).await;
+            }, 
+            "!donate" => {
+                commands::donate::handle_donate_command(&ctx, &msg).await;
+            },                         
             _ => {},
         }
 
